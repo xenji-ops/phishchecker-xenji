@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>PhishCheck Scanner</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">PhishCheck</div>
+    <a href="/">Home</a>
+</nav>
+
+<div class="app-container">
+
+    <h1>Threat Intelligence Scanner</h1>
+
+    <p class="subtitle">
+        Analyze URLs and detect potential phishing risks instantly.
+    </p>
+
+    <div class="search-box">
+        <input type="text" id="url" placeholder="Enter URL to analyze...">
+        <button onclick="checkURL()">Analyze</button>
+    </div>
+
+    <div id="result" class="result-card hidden"></div>
+
+</div>
+
+<script src="/static/script.js"></script>
+
+</body>
+</html>
