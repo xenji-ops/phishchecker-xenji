@@ -1,164 +1,213 @@
-body {
+/* --- Base Variables & Setup --- */
+:root {
+    --bg-color: #0d1117;
+    --card-bg: #161b22;
+    --text-main: #c9d1d9;
+    --text-muted: #8b949e;
+    --accent-blue: #58a6ff;
+    --danger-red: #f85149;
+    --warn-yellow: #d29922;
+    --safe-green: #3fb950;
+    --border-color: #30363d;
+}
+
+* {
+    box-sizing: border-box;
     margin: 0;
-    font-family: "Inter", sans-serif;
-    background: radial-gradient(circle at top, #0a0f1c, #020617);
-    color: #e2e8f0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* NAVBAR */
-.navbar {
-    display: flex;
-    justify-content: space-between;
-    padding: 24px 60px;
-}
-
-.logo {
-    font-weight: 600;
-    font-size: 20px;
-    letter-spacing: 1px;
-}
-
-.nav-btn {
-    background: linear-gradient(135deg, #3b82f6, #6366f1);
-    padding: 10px 18px;
-    border-radius: 10px;
-    text-decoration: none;
-    color: white;
-    transition: 0.3s;
-}
-
-.nav-btn:hover {
-    transform: scale(1.05);
-}
-
-/* HERO */
-.hero {
-    text-align: center;
-    margin-top: 120px;
-}
-
-.hero h1 {
-    font-size: 52px;
-    line-height: 1.2;
-}
-
-.hero span {
-    background: linear-gradient(135deg, #3b82f6, #6366f1);
-    -webkit-background-clip: text;
-    color: transparent;
-}
-
-.hero p {
-    margin-top: 20px;
-    color: #94a3b8;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.cta {
-    display: inline-block;
-    margin-top: 30px;
-    padding: 14px 26px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #3b82f6, #6366f1);
-    color: white;
-    text-decoration: none;
-    transition: 0.3s;
-}
-
-.cta:hover {
-    transform: translateY(-3px);
-}
-
-/* FEATURES */
-.features {
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    line-height: 1.6;
     display: flex;
     justify-content: center;
-    gap: 30px;
-    margin-top: 100px;
+    min-height: 100vh;
 }
 
-.card {
-    width: 260px;
-    padding: 25px;
-    border-radius: 20px;
-    background: rgba(255,255,255,0.03);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.05);
-    transition: 0.3s;
-}
-
-.card:hover {
-    transform: translateY(-8px);
-}
-
-/* APP */
-.app-container {
-    text-align: center;
-    margin-top: 100px;
-}
-
-.subtitle {
-    color: #94a3b8;
-    margin-top: 10px;
-}
-
-/* SEARCH BOX */
-.search-box {
-    margin-top: 30px;
-}
-
-input {
-    padding: 14px;
-    width: 340px;
-    border-radius: 12px;
-    border: none;
-    outline: none;
-    background: rgba(255,255,255,0.05);
-    color: white;
-}
-
-button {
-    padding: 14px 20px;
-    border-radius: 12px;
-    border: none;
-    margin-left: 10px;
-    background: linear-gradient(135deg, #3b82f6, #6366f1);
-    color: white;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-button:hover {
-    transform: scale(1.05);
-}
-
-/* RESULT CARD */
-.result-card {
-    margin-top: 40px;
-    padding: 25px;
-    border-radius: 20px;
-    width: 420px;
-    margin-left: auto;
-    margin-right: auto;
-    background: rgba(255,255,255,0.04);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.08);
-    animation: fadeIn 0.4s ease;
+.container {
+    width: 100%;
+    max-width: 800px;
+    padding: 2rem;
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
-/* COLORS */
-.safe { color: #22c55e; }
-.suspicious { color: #facc15; }
-.phishy { color: #ef4444; }
+/* --- Typography & Links --- */
+h1, h2, h3 {
+    color: #ffffff;
+    margin-bottom: 0.5rem;
+}
 
-/* ANIMATION */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+.highlight {
+    color: var(--accent-blue);
+}
+
+a {
+    color: var(--accent-blue);
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+
+/* --- Buttons & Inputs --- */
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: 0.2s ease-in-out;
+}
+
+.primary-btn {
+    background-color: var(--accent-blue);
+    color: #000;
+}
+.primary-btn:hover {
+    background-color: #318bf8;
+    text-decoration: none;
+}
+
+/* --- Hero Page --- */
+.hero {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100vh;
+}
+.hero-content p {
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+/* --- App Page Layout --- */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.input-section {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 2rem;
+}
+
+#url-input {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    color: var(--text-main);
+    font-size: 1rem;
+}
+#url-input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+/* --- States & Loading --- */
+.state-panel {
+    text-align: center;
+    padding: 3rem;
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.error-msg {
+    color: var(--danger-red);
+    font-weight: bold;
+}
+
+.spinner {
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--accent-blue);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* --- Results UI --- */
+.result-banner {
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    border: 2px solid transparent;
+}
+
+.result-banner h1 {
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* Dynamic Classes added by JS */
+.is-safe {
+    background-color: rgba(63, 185, 80, 0.1);
+    border-color: var(--safe-green);
+    color: var(--safe-green);
+}
+.is-safe h1 { color: var(--safe-green); }
+
+.is-suspicious {
+    background-color: rgba(210, 153, 34, 0.1);
+    border-color: var(--warn-yellow);
+    color: var(--warn-yellow);
+}
+.is-suspicious h1 { color: var(--warn-yellow); }
+
+.is-phishy {
+    background-color: rgba(248, 81, 73, 0.1);
+    border-color: var(--danger-red);
+    color: var(--danger-red);
+}
+.is-phishy h1 { color: var(--danger-red); }
+
+.results-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.card {
+    background-color: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.card h3 {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+#reasons-list {
+    padding-left: 1.5rem;
+    color: var(--text-muted);
+}
+#reasons-list li {
+    margin-bottom: 0.5rem;
 }

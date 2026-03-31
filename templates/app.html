@@ -1,35 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PhishCheck Scanner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner - PhishChecker</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <div class="container app-container">
+        <header class="app-header">
+            <a href="/" class="back-link">← Home</a>
+            <h2>Threat Scanner</h2>
+        </header>
 
-<nav class="navbar">
-    <div class="logo">PhishCheck</div>
-    <a href="/">Home</a>
-</nav>
+        <div class="input-section">
+            <input type="text" id="url-input" placeholder="Paste URL here (e.g., https://example.com)" autocomplete="off">
+            <button id="scan-btn" class="btn primary-btn">Analyze</button>
+        </div>
 
-<div class="app-container">
+        <div id="loading-state" class="state-panel hidden">
+            <div class="spinner"></div>
+            <p>Scanning heuristics and gathering AI internet intelligence...<br><small>(This usually takes 3-6 seconds)</small></p>
+        </div>
 
-    <h1>Threat Intelligence Scanner</h1>
+        <div id="error-state" class="state-panel hidden">
+            <p id="error-text" class="error-msg">An error occurred.</p>
+        </div>
 
-    <p class="subtitle">
-        Analyze URLs and detect potential phishing risks instantly.
-    </p>
+        <div id="results-state" class="hidden">
+            <div class="result-banner" id="verdict-banner">
+                <h1 id="verdict-title">Evaluating...</h1>
+                <p>Heuristic Risk Score: <span id="score-text">0.0</span></p>
+            </div>
 
-    <div class="search-box">
-        <input type="text" id="url" placeholder="Enter URL to analyze...">
-        <button onclick="checkURL()">Analyze</button>
+            <div class="results-grid">
+                <div class="card ai-card">
+                    <h3>🤖 AI OSINT Consensus</h3>
+                    <p id="ai-summary-text">AI is thinking...</p>
+                </div>
+
+                <div class="card triggers-card">
+                    <h3>🔍 Technical Triggers</h3>
+                    <ul id="reasons-list">
+                        </ul>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div id="result" class="result-card hidden"></div>
-
-</div>
-
-<script src="/static/script.js"></script>
-
+    <script src="/static/script.js"></script>
 </body>
 </html>
