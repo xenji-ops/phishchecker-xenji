@@ -36,6 +36,10 @@ def app_page():
     with open("templates/app.html", encoding="utf-8") as f:
         return f.read()
 
+@app.get("/ping")
+def ping():
+    return {"status": "ok"}
+
 # --------------------------
 # MODELS
 # --------------------------
