@@ -1,53 +1,245 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner - PhishChecker</title>
-    <link rel="stylesheet" href="/static/style.css">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LinkLens — Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/style.css"/>
 </head>
-<body>
-    <div class="container app-container">
-        <header class="app-header">
-            <a href="/" class="back-link">← Home</a>
-            <h2>Threat Scanner</h2>
-        </header>
-
-        <div class="input-section">
-            <input type="text" id="url-input" placeholder="Paste URL here (e.g., https://example.com)" autocomplete="off">
-            <button id="scan-btn" class="btn primary-btn">Analyze</button>
-        </div>
-
-        <div id="loading-state" class="state-panel hidden">
-            <div class="spinner"></div>
-            <p>Scanning heuristics and gathering AI internet intelligence...<br><small>(This usually takes 3-6 seconds)</small></p>
-        </div>
-
-        <div id="error-state" class="state-panel hidden">
-            <p id="error-text" class="error-msg">An error occurred.</p>
-        </div>
-
-        <div id="results-state" class="hidden">
-            <div class="result-banner" id="verdict-banner">
-                <h1 id="verdict-title">Evaluating...</h1>
-                <p>Heuristic Risk Score: <span id="score-text">0.0</span></p>
-            </div>
-
-            <div class="results-grid">
-                <div class="card ai-card">
-                    <h3>🤖 AI OSINT Consensus</h3>
-                    <p id="ai-summary-text">AI is thinking...</p>
-                </div>
-
-                <div class="card triggers-card">
-                    <h3>🔍 Technical Triggers</h3>
-                    <ul id="reasons-list">
-                        </ul>
-                </div>
-            </div>
-        </div>
+<body class="app-body">
+ 
+  <div class="scan-line"></div>
+  <div class="grid-bg"></div>
+ 
+  <!-- DISCLAIMER BANNER -->
+  <div class="disclaimer-banner">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span>Results are AI-generated estimates only. <strong>Do not treat this as a definitive security verdict.</strong> When in doubt, avoid the link.</span>
+  </div>
+ 
+  <nav class="navbar">
+    <a href="/" class="nav-logo">
+      <span class="logo-icon">⬡</span>
+      <span class="logo-text">LinkLens</span>
+    </a>
+    <span class="nav-tag">Scanner v1.0</span>
+  </nav>
+ 
+  <main class="app-main">
+ 
+    <div class="scanner-panel">
+      <div class="panel-header">
+        <div class="panel-indicator"></div>
+        <span class="panel-title">URL ANALYSIS TERMINAL</span>
+      </div>
+ 
+      <div class="input-group">
+        <span class="input-prefix">›_</span>
+        <input
+          type="text"
+          id="urlInput"
+          class="url-input"
+          placeholder="paste URL to scan... e.g. https://example.com"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+ 
+      <button class="scan-btn" id="scanBtn" onclick="runScan()">
+        <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <span id="btnText">Run Scan</span>
+      </button>
     </div>
-
-    <script src="/static/script.js"></script>
+ 
+    <!-- Loading State -->
+    <div class="loading-panel" id="loadingPanel" style="display:none;">
+      <div class="radar-ring"></div>
+      <div class="loading-steps" id="loadingSteps">
+        <div class="loading-step active" id="step1">
+          <div class="step-dot"></div>
+          <span>Running pattern analysis...</span>
+        </div>
+        <div class="loading-step" id="step2">
+          <div class="step-dot"></div>
+          <span>Searching public community reports...</span>
+        </div>
+        <div class="loading-step" id="step3">
+          <div class="step-dot"></div>
+          <span>AI model analysing evidence...</span>
+        </div>
+        <div class="loading-step" id="step4">
+          <div class="step-dot"></div>
+          <span>Generating verdict...</span>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- Result Panel -->
+    <div class="result-panel" id="resultPanel" style="display:none;">
+ 
+      <div class="verdict-header" id="verdictHeader">
+        <div class="verdict-icon" id="verdictIcon"></div>
+        <div class="verdict-text-group">
+          <div class="verdict-label">VERDICT</div>
+          <div class="verdict-value" id="verdictValue">SAFE</div>
+        </div>
+        <div class="verdict-score">
+          <div class="score-label">RISK SCORE</div>
+          <div class="score-value" id="scoreValue">0.00</div>
+        </div>
+      </div>
+ 
+      <!-- Inline disclaimer on every result -->
+      <div class="result-disclaimer">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        This is an AI-generated estimate based on publicly available information. It may be wrong. Always use your own judgement.
+      </div>
+ 
+      <div class="result-body">
+        <div class="result-section">
+          <div class="section-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            AI Intelligence Report
+          </div>
+          <p class="section-content" id="aiSummary">—</p>
+        </div>
+ 
+        <div class="result-section" id="heuristicsSection" style="display:none;">
+          <div class="section-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Threat Signals Detected
+          </div>
+          <ul class="threat-list" id="threatList"></ul>
+        </div>
+      </div>
+ 
+      <button class="reset-btn" onclick="resetScan()">← Scan Another URL</button>
+    </div>
+ 
+    <!-- Error Panel -->
+    <div class="error-panel" id="errorPanel" style="display:none;">
+      <div class="error-icon">!</div>
+      <p class="error-msg" id="errorMsg">Something went wrong.</p>
+      <button class="reset-btn" onclick="resetScan()">← Try Again</button>
+    </div>
+ 
+  </main>
+ 
+  <script>
+    const input = document.getElementById('urlInput');
+ 
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') runScan();
+    });
+ 
+    async function runScan() {
+      const url = input.value.trim();
+      if (!url) {
+        input.classList.add('input-shake');
+        setTimeout(() => input.classList.remove('input-shake'), 400);
+        return;
+      }
+ 
+      showLoading();
+      animateSteps();
+ 
+      try {
+        const res = await fetch('/api/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+ 
+        if (!res.ok) {
+          const err = await res.json();
+          showError(err.detail || 'Server error. Please try again.');
+          return;
+        }
+ 
+        const data = await res.json();
+        showResult(data);
+ 
+      } catch (e) {
+        showError('Could not reach the server. Is it running?');
+      }
+    }
+ 
+    function animateSteps() {
+      const steps = ['step1','step2','step3','step4'];
+      const delays = [0, 1200, 2400, 3600];
+      steps.forEach((id, i) => {
+        setTimeout(() => {
+          document.querySelectorAll('.loading-step').forEach(s => s.classList.remove('active'));
+          document.getElementById(id).classList.add('active');
+        }, delays[i]);
+      });
+    }
+ 
+    function showLoading() {
+      document.getElementById('scanBtn').disabled = true;
+      document.getElementById('btnText').textContent = 'Scanning...';
+      hide('resultPanel'); hide('errorPanel');
+      show('loadingPanel');
+    }
+ 
+    function showResult(data) {
+      hide('loadingPanel');
+      document.getElementById('scanBtn').disabled = false;
+      document.getElementById('btnText').textContent = 'Run Scan';
+ 
+      const panel = document.getElementById('resultPanel');
+      const header = document.getElementById('verdictHeader');
+      const icon = document.getElementById('verdictIcon');
+      const val = document.getElementById('verdictValue');
+      const score = document.getElementById('scoreValue');
+      const summary = document.getElementById('aiSummary');
+ 
+      header.className = 'verdict-header verdict-' + data.verdict;
+      val.textContent = data.verdict.toUpperCase();
+      score.textContent = data.final_score.toFixed(2);
+ 
+      const icons = {
+        safe: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>`,
+        suspicious: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+        phishy: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
+      };
+      icon.innerHTML = icons[data.verdict] || icons.safe;
+ 
+      summary.textContent = data.ai_research_summary || 'No additional information available.';
+ 
+      const hs = document.getElementById('heuristicsSection');
+      const tl = document.getElementById('threatList');
+      if (data.heuristic_reasons && data.heuristic_reasons.length > 0) {
+        tl.innerHTML = data.heuristic_reasons.map(r => `<li class="threat-item">${r}</li>`).join('');
+        show('heuristicsSection');
+      } else {
+        hide('heuristicsSection');
+      }
+ 
+      show('resultPanel');
+      panel.style.animation = 'none';
+      panel.offsetHeight;
+      panel.style.animation = 'slideUp 0.35s ease';
+    }
+ 
+    function showError(msg) {
+      hide('loadingPanel');
+      document.getElementById('scanBtn').disabled = false;
+      document.getElementById('btnText').textContent = 'Run Scan';
+      document.getElementById('errorMsg').textContent = msg;
+      show('errorPanel');
+    }
+ 
+    function resetScan() {
+      hide('resultPanel'); hide('errorPanel'); hide('loadingPanel');
+      input.value = '';
+      input.focus();
+    }
+ 
+    function show(id) { document.getElementById(id).style.display = 'block'; }
+    function hide(id) { document.getElementById(id).style.display = 'none'; }
+  </script>
 </body>
 </html>
