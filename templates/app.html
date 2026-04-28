@@ -3,59 +3,76 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>LinkLens — Scanner</title>
+<title>URL Verdict — URL Scanner</title>
+<meta name="description" content="Scan any URL for phishing, scams, or fraud using AI + real community reports."/>
+
+<!-- OG Tags -->
+<meta property="og:title" content="URL Verdict — URL Scanner"/>
+<meta property="og:description" content="Is this link safe? Check any URL with AI + Reddit/Trustpilot reports."/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://urlverdict.vercel.app/app"/>
+
+<!-- Emoji favicon -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔗</text></svg>"/>
+
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/static/style.css"/>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body class="app-body">
- 
+
   <div class="scan-line"></div>
   <div class="grid-bg"></div>
- 
-  <!-- DISCLAIMER BANNER -->
-  <div class="disclaimer-banner">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-    <span>Results are AI-generated estimates only. <strong>Do not treat this as a definitive security verdict.</strong> When in doubt, avoid the link.</span>
-  </div>
- 
+
   <nav class="navbar">
     <a href="/" class="nav-logo">
       <span class="logo-icon">⬡</span>
-      <span class="logo-text">LinkLens</span>
+      <span class="logo-text">URL Verdict</span>
     </a>
-    <span class="nav-tag">Scanner v1.0</span>
+    <span class="nav-tag">Free URL Scanner</span>
   </nav>
- 
+
   <main class="app-main">
- 
+
+    <!-- Scanner Input Panel -->
     <div class="scanner-panel">
       <div class="panel-header">
         <div class="panel-indicator"></div>
-        <span class="panel-title">URL ANALYSIS TERMINAL</span>
+        <span class="panel-title">URL Scanner</span>
+        <span class="panel-hint">Press Enter to scan</span>
       </div>
- 
-      <div class="input-group">
+
+      <div class="input-group" id="inputGroup">
         <span class="input-prefix">›_</span>
         <input
           type="text"
           id="urlInput"
           class="url-input"
-          placeholder="paste URL to scan... e.g. https://example.com"
+          placeholder="Paste any URL here... e.g. https://example.com"
           autocomplete="off"
           spellcheck="false"
         />
+        <button class="input-clear" id="clearBtn" onclick="clearInput()" style="display:none;" title="Clear">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
- 
+
       <button class="scan-btn" id="scanBtn" onclick="runScan()">
         <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <span id="btnText">Run Scan</span>
+        <span id="btnText">Scan URL</span>
       </button>
+
+      <p class="scanner-note">We don't store your URLs · Results are AI estimates · Use your own judgement</p>
     </div>
- 
+
+    <!-- Recent Scans -->
+    <div id="recentScans" class="recent-scans" style="display:none;"></div>
+
     <!-- Loading State -->
     <div class="loading-panel" id="loadingPanel" style="display:none;">
       <div class="radar-ring"></div>
+      <p class="loading-domain" id="loadingDomain">Scanning...</p>
       <div class="loading-steps" id="loadingSteps">
         <div class="loading-step active" id="step1">
           <div class="step-dot"></div>
@@ -63,77 +80,122 @@
         </div>
         <div class="loading-step" id="step2">
           <div class="step-dot"></div>
-          <span>Searching public community reports...</span>
+          <span>Searching Reddit &amp; Trustpilot...</span>
         </div>
         <div class="loading-step" id="step3">
           <div class="step-dot"></div>
-          <span>AI model analysing evidence...</span>
+          <span>AI reading the evidence...</span>
         </div>
         <div class="loading-step" id="step4">
           <div class="step-dot"></div>
-          <span>Generating verdict...</span>
+          <span>Generating your verdict...</span>
         </div>
       </div>
     </div>
- 
+
     <!-- Result Panel -->
     <div class="result-panel" id="resultPanel" style="display:none;">
- 
+
       <div class="verdict-header" id="verdictHeader">
         <div class="verdict-icon" id="verdictIcon"></div>
         <div class="verdict-text-group">
-          <div class="verdict-label">VERDICT</div>
+          <div class="verdict-label">Verdict</div>
           <div class="verdict-value" id="verdictValue">SAFE</div>
+          <div class="verdict-domain" id="verdictDomain"></div>
         </div>
         <div class="verdict-score">
-          <div class="score-label">RISK SCORE</div>
+          <div class="score-label">Risk score</div>
           <div class="score-value" id="scoreValue">0.00</div>
+          <div class="score-sublabel" id="scoreDesc">Low risk</div>
         </div>
       </div>
- 
-      <!-- Inline disclaimer on every result -->
+
       <div class="result-disclaimer">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        This is an AI-generated estimate based on publicly available information. It may be wrong. Always use your own judgement.
+        AI-generated estimate · May be wrong · Always use your own judgement
       </div>
- 
+
       <div class="result-body">
         <div class="result-section">
           <div class="section-label">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            AI Intelligence Report
+            What the internet says
           </div>
           <p class="section-content" id="aiSummary">—</p>
         </div>
- 
+
         <div class="result-section" id="heuristicsSection" style="display:none;">
           <div class="section-label">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Threat Signals Detected
+            Threat signals detected
           </div>
           <ul class="threat-list" id="threatList"></ul>
         </div>
       </div>
- 
-      <button class="reset-btn" onclick="resetScan()">← Scan Another URL</button>
+
+      <!-- Action buttons -->
+      <div class="result-actions">
+        <button class="action-btn share-btn" id="shareBtn" onclick="shareResult()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Share result
+        </button>
+        <button class="action-btn reset-btn-new" onclick="resetScan()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.87"/></svg>
+          Scan another URL
+        </button>
+      </div>
     </div>
- 
+
     <!-- Error Panel -->
     <div class="error-panel" id="errorPanel" style="display:none;">
-      <div class="error-icon">!</div>
+      <div class="error-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
       <p class="error-msg" id="errorMsg">Something went wrong.</p>
-      <button class="reset-btn" onclick="resetScan()">← Try Again</button>
+      <button class="scan-btn" style="margin-top:1rem;" onclick="resetScan()">Try Again</button>
     </div>
- 
+
+    <!-- Share toast -->
+    <div class="toast" id="toast">Link copied to clipboard!</div>
+
   </main>
- 
+
   <script>
     const input = document.getElementById('urlInput');
- 
+    const clearBtn = document.getElementById('clearBtn');
+
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') runScan();
     });
- 
+
+    input.addEventListener('input', () => {
+      clearBtn.style.display = input.value ? 'flex' : 'none';
+    });
+
+    function clearInput() {
+      input.value = '';
+      clearBtn.style.display = 'none';
+      input.focus();
+    }
+
+    let scrambleInterval = null;
+    function startMatrixScramble(element, targetText) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*';
+      let iterations = 0;
+      clearInterval(scrambleInterval);
+      scrambleInterval = setInterval(() => {
+        element.textContent = targetText.split('').map((char, index) => {
+          if (index < iterations) return char;
+          return chars[Math.floor(Math.random() * chars.length)];
+        }).join('');
+        if (iterations >= targetText.length) clearInterval(scrambleInterval);
+        iterations += 1/3;
+      }, 30);
+    }
+    function stopMatrixScramble() { clearInterval(scrambleInterval); }
+
+    let currentUrl = '';
+
     async function runScan() {
       const url = input.value.trim();
       if (!url) {
@@ -141,74 +203,104 @@
         setTimeout(() => input.classList.remove('input-shake'), 400);
         return;
       }
- 
-      showLoading();
+
+      currentUrl = url;
+      showLoading(url);
       animateSteps();
- 
+
       try {
         const res = await fetch('/api/check', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url })
         });
- 
+
         if (!res.ok) {
           const err = await res.json();
           showError(err.detail || 'Server error. Please try again.');
           return;
         }
- 
+
         const data = await res.json();
-        showResult(data);
- 
+        showResult(data, url);
+
       } catch (e) {
-        showError('Could not reach the server. Is it running?');
+        showError('Could not reach the server. Please try again.');
       }
     }
- 
+
+    let stepTimer = null;
+
     function animateSteps() {
       const steps = ['step1','step2','step3','step4'];
-      const delays = [0, 1200, 2400, 3600];
+      const delays = [0, 1500, 3000, 4500];
       steps.forEach((id, i) => {
-        setTimeout(() => {
+        stepTimer = setTimeout(() => {
           document.querySelectorAll('.loading-step').forEach(s => s.classList.remove('active'));
-          document.getElementById(id).classList.add('active');
+          const el = document.getElementById(id);
+          if (el) el.classList.add('active');
         }, delays[i]);
       });
     }
- 
-    function showLoading() {
+
+    function showLoading(url) {
       document.getElementById('scanBtn').disabled = true;
       document.getElementById('btnText').textContent = 'Scanning...';
       hide('resultPanel'); hide('errorPanel');
       show('loadingPanel');
+
+      // Show the domain being scanned
+      try {
+        let host = url;
+        if (!url.startsWith('http')) host = 'https://' + url;
+        host = new URL(host).hostname.replace('www.', '');
+        startMatrixScramble(document.getElementById('loadingDomain'), host);
+      } catch(e) {
+        startMatrixScramble(document.getElementById('loadingDomain'), 'Scanning...');
+      }
     }
- 
-    function showResult(data) {
+
+    function showResult(data, url) {
       hide('loadingPanel');
       document.getElementById('scanBtn').disabled = false;
-      document.getElementById('btnText').textContent = 'Run Scan';
- 
-      const panel = document.getElementById('resultPanel');
+      document.getElementById('btnText').textContent = 'Scan URL';
+
       const header = document.getElementById('verdictHeader');
       const icon = document.getElementById('verdictIcon');
       const val = document.getElementById('verdictValue');
       const score = document.getElementById('scoreValue');
+      const scoreDesc = document.getElementById('scoreDesc');
       const summary = document.getElementById('aiSummary');
- 
+      const domainEl = document.getElementById('verdictDomain');
+
       header.className = 'verdict-header verdict-' + data.verdict;
       val.textContent = data.verdict.toUpperCase();
       score.textContent = data.final_score.toFixed(2);
- 
+
+      // Human-readable score description
+      const scoreDescMap = {
+        safe: 'Low risk',
+        suspicious: 'Moderate risk',
+        phishy: 'High risk'
+      };
+      scoreDesc.textContent = scoreDescMap[data.verdict] || '';
+
+      // Show domain scanned
+      try {
+        let host = url;
+        if (!url.startsWith('http')) host = 'https://' + url;
+        domainEl.textContent = new URL(host).hostname.replace('www.', '');
+      } catch(e) { domainEl.textContent = ''; }
+
       const icons = {
         safe: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>`,
         suspicious: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
         phishy: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
       };
       icon.innerHTML = icons[data.verdict] || icons.safe;
- 
+
       summary.textContent = data.ai_research_summary || 'No additional information available.';
- 
+
       const hs = document.getElementById('heuristicsSection');
       const tl = document.getElementById('threatList');
       if (data.heuristic_reasons && data.heuristic_reasons.length > 0) {
@@ -217,29 +309,107 @@
       } else {
         hide('heuristicsSection');
       }
- 
+
+      stopMatrixScramble();
       show('resultPanel');
+      const panel = document.getElementById('resultPanel');
+      
+      // Animations & Effects
+      panel.className = 'result-panel panel-glow-' + data.verdict;
+      if (data.verdict === 'phishy') panel.classList.add('shake-alert');
+      if (data.verdict === 'safe') {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#3DDB84', '#ffffff', '#4D9EFF'] });
+      }
+
       panel.style.animation = 'none';
-      panel.offsetHeight;
-      panel.style.animation = 'slideUp 0.35s ease';
+      if (data.verdict !== 'phishy') {
+        panel.offsetHeight;
+        panel.style.animation = 'slideUp 0.35s ease';
+      }
+      
+      saveScanToStorage(url, data.verdict);
     }
- 
+
     function showError(msg) {
+      stopMatrixScramble();
       hide('loadingPanel');
       document.getElementById('scanBtn').disabled = false;
-      document.getElementById('btnText').textContent = 'Run Scan';
+      document.getElementById('btnText').textContent = 'Scan URL';
       document.getElementById('errorMsg').textContent = msg;
       show('errorPanel');
     }
- 
+
     function resetScan() {
+      stopMatrixScramble();
       hide('resultPanel'); hide('errorPanel'); hide('loadingPanel');
       input.value = '';
+      clearBtn.style.display = 'none';
+      currentUrl = '';
       input.focus();
     }
- 
+
+    function shareResult() {
+      const verdict = document.getElementById('verdictValue').textContent;
+      const domain = document.getElementById('verdictDomain').textContent;
+      const shareText = `I checked "${domain}" on URL Verdict and got: ${verdict}\n\nCheck any URL for free 👉 https://urlverdict.vercel.app`;
+
+      if (navigator.share) {
+        navigator.share({ title: 'URL Verdict Result', text: shareText, url: 'https://urlverdict.vercel.app' })
+          .catch(() => copyToClipboard(shareText));
+      } else {
+        copyToClipboard('https://urlverdict.vercel.app');
+      }
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        const toast = document.getElementById('toast');
+        toast.classList.add('toast-show');
+        setTimeout(() => toast.classList.remove('toast-show'), 2500);
+      });
+    }
+
     function show(id) { document.getElementById(id).style.display = 'block'; }
     function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+    // --- Recent Scans Logic ---
+    function saveScanToStorage(url, verdict) {
+      let scans = JSON.parse(localStorage.getItem('recentScans') || '[]');
+      scans = scans.filter(s => s.url !== url);
+      scans.unshift({ url, verdict });
+      if (scans.length > 5) scans.pop();
+      localStorage.setItem('recentScans', JSON.stringify(scans));
+      renderRecentScans();
+    }
+
+    function renderRecentScans() {
+      const scans = JSON.parse(localStorage.getItem('recentScans') || '[]');
+      const container = document.getElementById('recentScans');
+      if (scans.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      
+      let html = '<div class="recent-scans-title">Recent:</div>';
+      scans.forEach(s => {
+        let host = s.url;
+        try { host = new URL(s.url.startsWith('http') ? s.url : 'https://' + s.url).hostname.replace('www.', ''); } catch(e){}
+        html += `<div class="recent-scan-chip" onclick="loadRecent('${s.url}')">
+                   <div class="chip-dot ${s.verdict}"></div>
+                   ${host}
+                 </div>`;
+      });
+      container.innerHTML = html;
+      container.style.display = 'flex';
+    }
+
+    function loadRecent(url) {
+      input.value = url;
+      clearBtn.style.display = 'flex';
+      runScan();
+    }
+
+    renderRecentScans();
   </script>
 </body>
 </html>
