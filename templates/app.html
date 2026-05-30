@@ -11,13 +11,16 @@
 <meta property="og:description" content="Is this link safe? Check any URL with AI + Reddit/Trustpilot reports."/>
 <meta property="og:type" content="website"/>
 <meta property="og:url" content="https://urlverdict.vercel.app/app"/>
+<meta property="og:image" content="https://urlverdict.vercel.app/static/og-image.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://urlverdict.vercel.app/static/og-image.png"/>
 
 <!-- Emoji favicon -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔗</text></svg>"/>
 
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="/static/style.css"/>
+<link rel="stylesheet" href="/static/style.css?v=2.2"/>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body class="app-body">
@@ -115,6 +118,12 @@
         AI-generated estimate · May be wrong · Always use your own judgement
       </div>
 
+      <!-- Safe but with reported issues banner -->
+      <div class="issues-banner" id="issuesBanner" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>This site appears to be <strong>legitimate</strong>, but some users have reported issues. Read the details below.</span>
+      </div>
+
       <div class="result-body">
         <div class="result-section">
           <div class="section-label">
@@ -135,6 +144,10 @@
 
       <!-- Action buttons -->
       <div class="result-actions">
+        <button class="action-btn report-btn" id="reportBtn" onclick="reportVerdict()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+          Report Error
+        </button>
         <button class="action-btn share-btn" id="shareBtn" onclick="shareResult()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           Share result
@@ -157,6 +170,19 @@
 
     <!-- Share toast -->
     <div class="toast" id="toast">Link copied to clipboard!</div>
+
+    <!-- Report Modal -->
+    <div class="modal-overlay" id="reportModal" style="display:none;">
+      <div class="modal-content">
+        <h3 class="modal-title">Report Incorrect Verdict</h3>
+        <p class="modal-desc">Tell us why you think this verdict is incorrect:</p>
+        <textarea id="reportReason" class="report-textarea" rows="4" placeholder="e.g. This is actually a legitimate site..."></textarea>
+        <div class="modal-actions">
+          <button class="cancel-btn" onclick="closeReportModal()">Cancel</button>
+          <button class="scan-btn" id="submitReportBtn" onclick="submitReport()">Submit Report</button>
+        </div>
+      </div>
+    </div>
 
   </main>
 
@@ -195,6 +221,7 @@
     function stopMatrixScramble() { clearInterval(scrambleInterval); }
 
     let currentUrl = '';
+    let currentVerdict = '';
 
     async function runScan() {
       const url = input.value.trim();
@@ -264,6 +291,13 @@
       hide('loadingPanel');
       document.getElementById('scanBtn').disabled = false;
       document.getElementById('btnText').textContent = 'Scan URL';
+      
+      currentVerdict = data.verdict;
+      const reportBtn = document.getElementById('reportBtn');
+      if (reportBtn) {
+        reportBtn.disabled = false;
+        reportBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>\n          Report Error`;
+      }
 
       const header = document.getElementById('verdictHeader');
       const icon = document.getElementById('verdictIcon');
@@ -272,14 +306,25 @@
       const scoreDesc = document.getElementById('scoreDesc');
       const summary = document.getElementById('aiSummary');
       const domainEl = document.getElementById('verdictDomain');
+      const issuesBanner = document.getElementById('issuesBanner');
 
-      header.className = 'verdict-header verdict-' + data.verdict;
-      val.textContent = data.verdict.toUpperCase();
+      // Map safe_with_issues to safe styling but keep distinct label
+      const styleVerdict = data.verdict === 'safe_with_issues' ? 'safe' : data.verdict;
+
+      header.className = 'verdict-header verdict-' + styleVerdict;
+
+      if (data.verdict === 'safe_with_issues') {
+        val.textContent = 'SAFE';
+      } else {
+        val.textContent = data.verdict.toUpperCase();
+      }
+
       score.textContent = data.final_score.toFixed(2);
 
       // Human-readable score description
       const scoreDescMap = {
         safe: 'Low risk',
+        safe_with_issues: 'Low risk · Some issues reported',
         suspicious: 'Moderate risk',
         phishy: 'High risk'
       };
@@ -297,14 +342,27 @@
         suspicious: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
         phishy: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
       };
-      icon.innerHTML = icons[data.verdict] || icons.safe;
+      icon.innerHTML = icons[styleVerdict] || icons.safe;
 
       summary.textContent = data.ai_research_summary || 'No additional information available.';
+
+      // Show/hide the "safe but with issues" warning banner
+      if (data.verdict === 'safe_with_issues') {
+        issuesBanner.style.display = 'flex';
+      } else {
+        issuesBanner.style.display = 'none';
+      }
 
       const hs = document.getElementById('heuristicsSection');
       const tl = document.getElementById('threatList');
       if (data.heuristic_reasons && data.heuristic_reasons.length > 0) {
-        tl.innerHTML = data.heuristic_reasons.map(r => `<li class="threat-item">${r}</li>`).join('');
+        tl.innerHTML = '';
+        data.heuristic_reasons.forEach(r => {
+          const li = document.createElement('li');
+          li.className = 'threat-item';
+          li.textContent = r;
+          tl.appendChild(li);
+        });
         show('heuristicsSection');
       } else {
         hide('heuristicsSection');
@@ -315,7 +373,7 @@
       const panel = document.getElementById('resultPanel');
       
       // Animations & Effects
-      panel.className = 'result-panel panel-glow-' + data.verdict;
+      panel.className = 'result-panel panel-glow-' + styleVerdict;
       if (data.verdict === 'phishy') panel.classList.add('shake-alert');
       if (data.verdict === 'safe') {
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#3DDB84', '#ffffff', '#4D9EFF'] });
@@ -327,7 +385,9 @@
         panel.style.animation = 'slideUp 0.35s ease';
       }
       
-      saveScanToStorage(url, data.verdict);
+      // Store as 'safe' in recent scans for chip dot color
+      const storageVerdict = data.verdict === 'safe_with_issues' ? 'safe' : data.verdict;
+      saveScanToStorage(url, storageVerdict);
     }
 
     function showError(msg) {
@@ -361,6 +421,50 @@
       }
     }
 
+    function reportVerdict() {
+      if (!currentUrl || !currentVerdict) return;
+      document.getElementById('reportReason').value = '';
+      show('reportModal');
+      document.getElementById('reportReason').focus();
+    }
+
+    function closeReportModal() {
+      hide('reportModal');
+    }
+
+    async function submitReport() {
+      if (!currentUrl || !currentVerdict) return;
+      
+      const reason = document.getElementById('reportReason').value.trim();
+      const submitBtn = document.getElementById('submitReportBtn');
+      const originalText = submitBtn.textContent;
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      try {
+        const res = await fetch('/api/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: currentUrl, verdict: currentVerdict, reason: reason })
+        });
+        
+        if (res.ok) {
+          closeReportModal();
+          const reportBtn = document.getElementById('reportBtn');
+          reportBtn.innerHTML = 'Reported ✓';
+          reportBtn.disabled = true;
+        } else {
+          alert('Error submitting report.');
+        }
+      } catch (e) {
+        alert('Could not reach the server.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    }
+
     function copyToClipboard(text) {
       navigator.clipboard.writeText(text).then(() => {
         const toast = document.getElementById('toast');
@@ -373,6 +477,12 @@
     function hide(id) { document.getElementById(id).style.display = 'none'; }
 
     // --- Recent Scans Logic ---
+    function escapeHTML(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
     function saveScanToStorage(url, verdict) {
       let scans = JSON.parse(localStorage.getItem('recentScans') || '[]');
       scans = scans.filter(s => s.url !== url);
@@ -389,17 +499,33 @@
         container.style.display = 'none';
         return;
       }
-      
-      let html = '<div class="recent-scans-title">Recent:</div>';
+
+      container.innerHTML = '';
+
+      const title = document.createElement('div');
+      title.className = 'recent-scans-title';
+      title.textContent = 'Recent:';
+      container.appendChild(title);
+
       scans.forEach(s => {
         let host = s.url;
         try { host = new URL(s.url.startsWith('http') ? s.url : 'https://' + s.url).hostname.replace('www.', ''); } catch(e){}
-        html += `<div class="recent-scan-chip" onclick="loadRecent('${s.url}')">
-                   <div class="chip-dot ${s.verdict}"></div>
-                   ${host}
-                 </div>`;
+
+        const chip = document.createElement('div');
+        chip.className = 'recent-scan-chip';
+        chip.dataset.url = s.url;
+        chip.addEventListener('click', () => loadRecent(s.url));
+
+        const dot = document.createElement('div');
+        dot.className = 'chip-dot ' + (['safe','suspicious','phishy'].includes(s.verdict) ? s.verdict : '');
+        chip.appendChild(dot);
+
+        const label = document.createTextNode(host);
+        chip.appendChild(label);
+
+        container.appendChild(chip);
       });
-      container.innerHTML = html;
+
       container.style.display = 'flex';
     }
 

@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -41,13 +41,19 @@ limiter = Limiter(key_func=get_remote_address)
  
 app = FastAPI()
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Custom rate limit handler with user-friendly message
+@app.exception_handler(RateLimitExceeded)
+async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "You're scanning too fast! Please wait a minute and try again."}
+    )
  
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://urlverdict.vercel.app",
-        "http://localhost:8000",
     ],
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
@@ -180,15 +186,20 @@ def analyze_reviews_with_ai(domain: str, search_results: list):
     You are a friendly cybersecurity guard helping a beginner who knows nothing about tech.
     Your job is to read these real internet comments (from Reddit/Trustpilot) about the website '{domain}'.
     
+    CRITICAL — You must understand the DIFFERENCE between these two situations:
+    A) A LEGITIMATE website that some users had bad experiences with (slow support, payout delays, bugs, policy disagreements). This is NORMAL — even Amazon and PayPal have angry reviews. These sites are NOT phishing.
+    B) An ACTUAL SCAM or PHISHING site that was created to steal money, credentials, or personal data. People report being tricked, fake products, stolen credit cards, or the site disappearing after payment.
+    
     RULES:
-    1. If the domain is a famous, obviously safe company (like google, github, amazon, apple, netflix, producthunt, linkedin, discord, notion, figma, vercel, cloudflare), you MUST output 'VERDICT: SAFE'.
-    2. If people are complaining about losing money or not getting products, output 'VERDICT: PHISHY'.
-    3. If there are no search results, the site is either very new or unknown. Output 'VERDICT: SUSPICIOUS' and warn the user there is not enough public information yet.
-    4. Only output 'VERDICT: SAFE' if there are genuinely positive reviews OR it is a known major brand.
+    1. If the domain is a well-known, established company or platform — output 'VERDICT: SAFE'. Even if some users had complaints, it is still a real business.
+    2. If the site is a real, legitimate business BUT people have reported significant issues (poor service, refund problems, payment delays) — output 'VERDICT: SAFE_WITH_ISSUES'. This means the site itself is real, not a scam, but users should be aware of reported problems.
+    3. If people are reporting that the site is an ACTUAL SCAM — fake products, stolen money with no real business behind it, phishing for credentials, impersonating another brand — output 'VERDICT: PHISHY'.
+    4. If there are no search results at all, the site is either very new or unknown. Output 'VERDICT: SUSPICIOUS' and warn the user there is not enough public information yet.
+    5. Only output 'VERDICT: PHISHY' if there is strong evidence of deliberate fraud, not just bad customer service.
     
     You MUST format your response exactly like this:
-    VERDICT: [Choose one: SAFE, SUSPICIOUS, or PHISHY]
-    SUMMARY: [Write 2 very simple sentences explaining what real people on the internet are saying. If it's safe, reassure them. If it's a scam, tell them exactly what people lost. If no reviews exist, tell them to be cautious.]
+    VERDICT: [Choose one: SAFE, SAFE_WITH_ISSUES, SUSPICIOUS, or PHISHY]
+    SUMMARY: [Write 2-3 very simple sentences. If SAFE, reassure them. If SAFE_WITH_ISSUES, tell them the site is legitimate but mention what issues people reported. If SUSPICIOUS, warn them there isn't enough info. If PHISHY, tell them exactly what scam people reported.]
     
     Search Results from Reddit/Trustpilot:
     {context}
@@ -206,13 +217,16 @@ def analyze_reviews_with_ai(domain: str, search_results: list):
             logger.warning("Gemini returned empty response for domain: %s", domain)
             return "SUSPICIOUS", "The AI analysis returned an empty response. Please try again."
  
-        # Original verdict extraction logic, safer default changed to SUSPICIOUS
+        # Verdict extraction — SAFE_WITH_ISSUES maps to SAFE with nuanced summary
         ai_verdict = "SUSPICIOUS"
-        if "VERDICT: PHISHY" in text.upper():
+        text_upper = text.upper()
+        if "VERDICT: PHISHY" in text_upper:
             ai_verdict = "PHISHY"
-        elif "VERDICT: SAFE" in text.upper():
+        elif "VERDICT: SAFE_WITH_ISSUES" in text_upper:
+            ai_verdict = "SAFE_WITH_ISSUES"
+        elif "VERDICT: SAFE" in text_upper:
             ai_verdict = "SAFE"
-        elif "VERDICT: SUSPICIOUS" in text.upper():
+        elif "VERDICT: SUSPICIOUS" in text_upper:
             ai_verdict = "SUSPICIOUS"
  
         if "SUMMARY:" in text:
@@ -234,7 +248,7 @@ def analyze_reviews_with_ai(domain: str, search_results: list):
 def check(request: Request, data: URLQuery):
     url = data.url.strip()
  
-    if not url.startswith("http"):
+    if not url.startswith(("http://", "https://")):
         url = "https://" + url
  
     parsed = urlparse(url)
@@ -272,11 +286,13 @@ def check(request: Request, data: URLQuery):
     # Step 3: Gemini reads those reports and gives a plain-English verdict
     ai_verdict, ai_summary = analyze_reviews_with_ai(host, search_data)
  
-    # Step 4: Final verdict (original logic, unchanged)
+    # Step 4: Final verdict — SAFE_WITH_ISSUES = legit site with complaints, not a scam
     if heuristic_score >= 0.8 or ai_verdict == "PHISHY":
         verdict = "phishy"
     elif heuristic_score >= 0.4 or ai_verdict == "SUSPICIOUS":
         verdict = "suspicious"
+    elif ai_verdict == "SAFE_WITH_ISSUES":
+        verdict = "safe_with_issues"
     else:
         verdict = "safe"
  
@@ -288,3 +304,18 @@ def check(request: Request, data: URLQuery):
         "heuristic_reasons": reasons,
         "ai_research_summary": ai_summary
     }
+
+class ReportRequest(BaseModel):
+    url: str
+    verdict: str
+    reason: str = ""
+
+@app.post("/api/report")
+@limiter.limit("5/minute")
+def report_verdict(request: Request, data: ReportRequest):
+    """Allows users to report when the AI gets it wrong."""
+    # Append to a local file (in a real app, this would go to a database)
+    with open("reports.log", "a") as f:
+        f.write(f"REPORT: {data.url} was marked as {data.verdict} - Reason: {data.reason}\n")
+    logger.info("User reported incorrect verdict for %s (was marked %s) - Reason: %s", data.url, data.verdict, data.reason)
+    return {"status": "success", "message": "Report submitted."}
